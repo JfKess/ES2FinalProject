@@ -20,47 +20,38 @@ qualifying = pd.read_csv('qualifying.csv')
 races = pd.read_csv('races.csv')
 
 #clean data to get rid of stuff we do not need
-#set circuit ID for monza and monaco 
-monza = circuits[circuits['circuitRef'] == 'monza']
-monzaID = monza['circuitId'].values[0] #you need the values[0] because without it you get a pd series, not an integer, the line basically just takes the first value in that row
-# print(monzaID)
-
-monaco = circuits[circuits['circuitRef'] == 'monaco']
-monacoID = monaco['circuitId'].values[0] #you need the values[0] because without it you get a pd series, not an integer, the line basically just takes the first value in that row
-# print(monacoID)
-
-#now lets get race ids for EVERY SINGLE race in Monza
-monza_races = races[races['circuitId'] == monzaID]
-monza_race_ID = monza_races['raceId']
-# print(monza_race_ID)
-
-
-
-#grab every single qualifying result for every driver ever at monza
-monza_quali = qualifying[qualifying['raceId'].isin(monza_race_ID)] #.isin is just getting all the values that contain monza race id, read it as "is in" basically. IS this value IN this series? 
-monza_quali_q1 = monza_quali[monza_quali['q1'] != '\\N'] #filter all DNQ
-monza_quali_q1.loc[:, 'q1'] = monza_quali_q1['q1'].apply(convert_to_sec) #.iloc here makes it so we're accurately replacing all the data, because otherwise we edit some things weirdly, and then the : there means all rows 
+def getQ1Times(circuitname):
+    track = circuits[circuits['circuitRef'] == circuitname]
+    trackID = track['circuitId'].values[0] #you need the values[0] because without it you get a pd series, not an integer, the line basically just takes the first value in that
+    trackName = track['name'].values[0] 
+    get_races = races[races['circuitId'] == trackID]
+    get_race_ID = get_races['raceId']
+    #grab every single qualifying result for every driver ever at monza
+    quali = qualifying[qualifying['raceId'].isin(get_race_ID)] #.isin is just getting all the values that contain monza race id, read it as "is in" basically. IS this value IN this series? 
+    quali_q1 = quali[quali['q1'] != '\\N'] #filter all DNQ
+    quali_q1.loc[:, 'q1'] = quali_q1['q1'].apply(convert_to_sec) #.iloc here makes it so we're accurately replacing all the data, because otherwise we edit some things weirdly, and then the : there means all rows 
 #.apply is a cool function in pandas I found that just goes "Apply this function to ALL the values"
-monza_quali_times = monza_quali_q1['q1']
+    quali_times = quali_q1['q1']
 #when plotting, we're gonna need to get dates
 #this is to merge the data together, the line just says, merge q1 data with races, but only take raceId and date functions from races, and merge them on raceId, just to give us a quali series with all the dates to make plotting easier
-monza_quali_with_date = monza_quali_q1.merge(races[['raceId', 'date']], on='raceId', how='left')
+    quali_with_date = quali_q1.merge(races[['raceId', 'date']], on='raceId', how='left')
 #this edits the date function to a standardized pandas format, idk how it works, its magic
-monza_quali_with_date['date'] = pd.to_datetime(monza_quali_with_date['date'])
-
-
-# Plot qualifying times over time (using date)
-plt.figure(figsize=(10, 6))
-plt.scatter(monza_quali_with_date['date'], monza_quali_with_date['q1'], marker='o', color='r')
+    quali_with_date['date'] = pd.to_datetime(quali_with_date['date'])
+    # Plot qualifying times over time (using date)
+    plt.figure(figsize=(10, 6))
+    plt.scatter(quali_with_date['date'], quali_with_date['q1'], marker='o', color='r')
 
 # Add labels and title
-plt.xlabel('Date')
-plt.ylabel('Qualifying Time (seconds)')
-plt.title('Qualifying Times Over Time - Monza')
-plt.gca().xaxis.set_major_locator(mdates.YearLocator(1))  # Set a tick every year
-plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y'))  # Format as year
-plt.xticks(rotation=45)  # Rotate the x-axis labels for better readability
+    plt.xlabel('Date')
+    plt.ylabel('Qualifying Time (seconds)')
+    plt.title(f'Qualifying Times Over Time - {trackName}')
+    plt.gca().xaxis.set_major_locator(mdates.YearLocator(1))  # Set a tick every year
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y'))  # Format as year
+    plt.xticks(rotation=45)  # Rotate the x-axis labels for better readability
 
 # Show the plot
+    plt.show()
 
-plt.show()
+
+getQ1Times('monza')
+    
