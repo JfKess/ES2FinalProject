@@ -51,7 +51,42 @@ def getQ1Times(circuitname):
 
 # Show the plot
     plt.show()
+    plt.savefig(f'qualifying_times_for_{circuitname}')
 
 
-getQ1Times('monza')
+def manyQ1Plots(circuitname):
+    track = circuits[circuits['circuitRef'] == circuitname]
+    trackID = track['circuitId'].values[0]
+    trackName = track['name'].values[0] 
+    get_races = races[races['circuitId'] == trackID]
+    get_race_ID = get_races['raceId']
+    quali = qualifying[qualifying['raceId'].isin(get_race_ID)]
+    quali_q1 = quali[quali['q1'] != '\\N']
+    quali_q1.loc[:, 'q1'] = quali_q1['q1'].apply(convert_to_sec)
+    quali_with_date = quali_q1.merge(races[['raceId', 'date']], on='raceId', how='left')
+    quali_with_date['date'] = pd.to_datetime(quali_with_date['date'])
+    teams = ['Mclaren', 'Williams', 'Ferrari', 'Redbull', 'RB', 'Kick-Sauber', 'Mercedes', 'Haas', 'Aston Martin', 'Alpine']
+    ids = [1, 3, 6, 9, 215, 15, 131, 210, 117, 214]
+    series = pd.Series(teams, index=ids)
+    fig, axes = plt.subplots(nrows=5, ncols=2, figsize=(15, 20), sharex=True)
+    axes = axes.flatten()
+    for i, constructor_id in enumerate(ids): #this iterates through my series keeping track of the index
+        team_data = quali_with_date[quali_with_date['constructorId'] == constructor_id]
+        ax = axes[i]
+        ax.plot(team_data['date'], team_data['q1'], marker='o', linestyle='', label=series[constructor_id])
+        ax.set_title(series[constructor_id])
+        ax.set_ylabel('Q1 Time (s)')
+        ax.grid(True)
+    plt.xlabel('Date')
+    plt.suptitle(f'Q1 Times Over Time at {trackName}', fontsize=16)
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    plt.show()
+    plt.savefig(f'{circuitname}-active_teams.png')
     
+
+manyQ1Plots('monza')
+getQ1Times('monza')
+getQ1Times('monaco')
+manyQ1Plots('monaco')
+
+
