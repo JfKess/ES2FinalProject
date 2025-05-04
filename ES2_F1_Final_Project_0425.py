@@ -19,6 +19,21 @@ laptimes = pd.read_csv('lap_times.csv')
 qualifying = pd.read_csv('qualifying.csv')
 races = pd.read_csv('races.csv')
 
+
+ruleChanges = {
+'Shift to V10 from V12' : 1995,
+'Grooved Tyres Introduced': 1998,
+'Traction Control Introduced' : 2001,
+'No Tyre Changes Mid Race' : 2005,
+'Tyre Changes Brought Back and Switch to V8' : 2006,
+'Traction Control Ban' : 2008,
+'Double Diffusers & Wider Wings, Return of Slick Tyres' : 2009,
+'DRS Introduced and Ban on Double Diffusers' : 2011,
+'Turbo Hybrid V6 Era' : 2014,
+'Simpler Front Wings' : 2019,
+'Budget Cap' : 2021,
+'Return of Ground Effect' : 2022
+      }
 #clean data to get rid of stuff we do not need
 def getQ1Times(circuitname):
     track = circuits[circuits['circuitRef'] == circuitname]
@@ -48,6 +63,11 @@ def getQ1Times(circuitname):
     plt.gca().xaxis.set_major_locator(mdates.YearLocator(1))  # Set a tick every year
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y'))  # Format as year
     plt.xticks(rotation=45)  # Rotate the x-axis labels for better readability
+    
+    for rule, year in ruleChanges.items():
+        date = pd.to_datetime(f'{year}-01-01')
+        plt.axvline(x = date)
+        plt.text(date, plt.ylim()[1]*0.95, rule, rotation=90, verticalalignment='top', fontsize=8, color='black')
 
 # Show the plot
     plt.show()
@@ -80,6 +100,7 @@ def manyQ1Plots(circuitname):
     plt.xlabel('Date')
     plt.suptitle(f'Q1 Times Over Time at {trackName}', fontsize=16)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
+    
     plt.show()
     plt.savefig(f'{circuitname}-active_teams.png')
     
@@ -107,7 +128,47 @@ def deltagraph(circuitname): #this function will take the fastest laps year to y
     fastest_laps['delta'] = fastest_laps['q1'].diff()
     plt.scatter(fastest_laps['date'], fastest_laps['delta'], marker='o', color='r')
 #     plt.bar(fastest_laps['date'], fastest_laps['delta'], width=100, color='orange')
+    plt.figure(figsize=(10, 6))
 
     plt.show()
-getQ1Times('monza')
-deltagraph('monza')
+    
+    
+def deltaAllLaps(circuitname):
+    #get all circuit references and IDs
+    track = circuits[circuits['circuitRef'] == circuitname]
+    trackID = track['circuitId'].values[0] 
+    trackName = track['name'].values[0] 
+    get_races = races[races['circuitId'] == trackID]
+    get_race_ID = get_races['raceId']
+    #isolate races on a specific circuit
+    laps = laptimes[laptimes['raceId'].isin(get_race_ID)]
+    #merge laps with races dataset on races
+    laps_with_date = laps.merge(races[['raceId', 'date']], on ='raceId', how = 'left')
+    #sort by milliseconds going down
+    fastest_laps = laps_with_date.groupby('raceId').agg({'milliseconds': 'min'}).reset_index()
+    #merge again
+    fastest_laps = fastest_laps.merge(races[['raceId', 'date']], on='raceId', how='left')
+    #convert dates to datetime
+    fastest_laps['date'] = pd.to_datetime(fastest_laps['date'])
+    #sort so dates go in order
+    fastest_laps = fastest_laps.sort_values('date')
+    #convert milliseconds to seconds
+    fastest_laps['seconds'] = fastest_laps['milliseconds'] / 1000
+    #get the difference
+    fastest_laps['delta'] = fastest_laps['seconds'].diff()
+
+    plt.figure(figsize=(10, 6))
+    
+    plt.scatter(fastest_laps['date'], fastest_laps['delta'], marker='o', color='r')
+    plt.axhline(0, color='black', linestyle='--', linewidth=1)
+#		RULE CHANGES LINES
+#     for rule, year in ruleChanges.items():
+#         date = pd.to_datetime(f'{year}-01-01')
+#         plt.axvline(x = date)
+#         plt.text(date, plt.ylim()[1]*0.95, rule, rotation=90, verticalalignment='top', fontsize=8, color='black')
+
+    plt.show()
+
+
+# getQ1Times('monza')
+deltaAllLaps('monza')
