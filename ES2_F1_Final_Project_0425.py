@@ -83,10 +83,31 @@ def manyQ1Plots(circuitname):
     plt.show()
     plt.savefig(f'{circuitname}-active_teams.png')
     
+def deltagraph(circuitname): #this function will take the fastest laps year to year and graph the difference in lap time year to year
+    track = circuits[circuits['circuitRef'] == circuitname]
+    trackID = track['circuitId'].values[0] 
+    trackName = track['name'].values[0] 
+    get_races = races[races['circuitId'] == trackID]
+    get_race_ID = get_races['raceId']
+    quali = qualifying[qualifying['raceId'].isin(get_race_ID)] 
+    quali_q1 = quali[quali['q1'] != '\\N'] #filter all DNQ
+    quali_q1.loc[:, 'q1'] = quali_q1['q1'].apply(convert_to_sec) 
 
-manyQ1Plots('monza')
+    quali_times = quali_q1['q1']
+    
+    # Get the fastest lap per race (with converted times)
+    quali_with_date = quali_q1.merge(races[['raceId', 'date']], on='raceId', how='left')
+    fastest_laps = quali_with_date.groupby('raceId').agg({'q1': 'min'}).reset_index()
+    # Merge back the race dates from quali_with_date or races
+    fastest_laps = fastest_laps.merge(races[['raceId', 'date']], on='raceId', how='left')
+    # Convert to datetime
+    fastest_laps['date'] = pd.to_datetime(fastest_laps['date'])
+    fastest_laps = fastest_laps.sort_values('date')
+    # Calculate delta
+    fastest_laps['delta'] = fastest_laps['q1'].diff()
+    plt.scatter(fastest_laps['date'], fastest_laps['delta'], marker='o', color='r')
+#     plt.bar(fastest_laps['date'], fastest_laps['delta'], width=100, color='orange')
+
+    plt.show()
 getQ1Times('monza')
-getQ1Times('monaco')
-manyQ1Plots('monaco')
-
-
+deltagraph('monza')
